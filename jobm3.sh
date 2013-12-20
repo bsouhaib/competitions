@@ -6,7 +6,8 @@ outfolder="$WORKDIR/OUT"
 jobfolder="jobs"
 rscript="main-m3.R"
 
-prefix=ICMLm3
+prefix=m3
+
 
 #allowdiff=FALSE
 allowdiff=TRUE
@@ -15,12 +16,12 @@ bigfile="$jobfolder/m3file.job"
 cat /dev/null > $bigfile
 nbsubjobs=0
 
-for idjob in $(seq 1 171) 
+for idjob in 42 57 72 101 143 #$(seq 1 143) 
 do			
 			name=$prefix-$allowdiff-$idjob
 			
 			a="/usr/local/opt/R/2.15.0/bin/R  CMD BATCH --no-restore "
-			b=" '--args idjob<-$idjob  allow.differencing<-$allowdiff  "
+			b=" '--args id.job<-$idjob  allow.differencing<-$allowdiff  "
 			c="folder<-\""$workingfolder/$prefix-"\"' "
 			d="$rscript "$outfolder/$name.Rout" "
 				
@@ -34,12 +35,12 @@ done
 read touche
 
 name=$prefix-$allowdiff
-file="jobfolder/m3newfile.job"
+file="$jobfolder/m3newfile.job"
 echo "#!/bin/bash -l" > $file
 
 echo "#PBS -t 1-$nbsubjobs" >> $file
 echo "#PBS -l file=10gb" >> $file
-echo "#PBS -l mem=15gb" >> $file
+echo "#PBS -l mem=17gb" >> $file
 echo "#PBS -l nodes=1:ppn=1" >> $file
 echo "#PBS -l walltime=20:00:00" >> $file
 echo "cd $localfolder" >> $file 

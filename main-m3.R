@@ -21,7 +21,10 @@ load("/u/sbentaie/DATA/M3/M3.Rdata")
 ################
 all.h <- sapply(M3, "[[", "h")
 all.n <- sapply(M3, "[[", "n")
-ind <- which(all.n >= 50)
+
+#ind <- which(all.n >= 50)
+ind <- which(all.h == 18)
+
 nb.runs <- length(ind)
 max.H <- max(all.h)
 
@@ -53,8 +56,8 @@ print(strategies)
 #control <- strategy_control("cv", n.fold=5)
 control <- strategy_control("ts-cv",train.percentage = 0.7, n.fold=5)
 
-bst1 <- strategy_learner(name = "BST", interactions=1, nu=0.1, max.mstop = 100)
-bst2 <- strategy_learner(name = "BST", interactions=2, nu=0.1, max.mstop = 100)
+bst1 <- strategy_learner(name = "BST", interactions=1, nu = 0.1, max.mstop = 100)
+bst2 <- strategy_learner(name = "BST", interactions=2, nu = 0.1, max.mstop = 100)
 knn <-  strategy_learner(name = "KNN")
 mlp <-  strategy_learner(name = "MLP", set.hidden = c(0,1,2,3,5), set.decay = c(0.005,0.01,0.05,0.1,0.2,0.3), nb.runs = 1, maxiter = 100)
 lin <-  strategy_learner(name = "MLP", set.hidden = 0, set.decay = 0)

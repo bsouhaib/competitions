@@ -18,7 +18,7 @@ do
 			name=$prefix-$idjob
 			
 			a="/usr/local/opt/R/2.15.0/bin/R  CMD BATCH --no-restore "
-			b=" '--args idjob<-$idjob"
+			b=" '--args id.job<-$idjob"
 			c="folder<-\""$workingfolder/$prefix-"\"' "
 			d="$rscript "$outfolder/$name.Rout" "
 				
