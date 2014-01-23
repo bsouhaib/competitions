@@ -1,18 +1,23 @@
 library(Hmisc)
 std <- function(x) sd(x,na.rm=T)/sqrt(length(which(!is.na(x))))
 
-error <- function(forecasts, future, measure = c("SMAPE"), list.data = NULL, all.id = NULL){
+error <- function(forecasts, future, measure = c("SMAPE1"), list.data = NULL, all.id = NULL){
 	
 	stopifnot(all(dim(forecasts) == dim(future)))
 	residuals <- forecasts - future
-	mysum <- abs(forecasts) + abs(future)
+	mysum1 <- abs(forecasts) + abs(future)
+	mysum2 <- forecasts + future
 	
 	pe <- residuals/future * 100
 	
-	if(measure == "SMAPE"){
+	if(measure == "SMAPE1"){
 		
-		RET <- abs(residuals)/(mysum/2) * 100
+		RET <- abs(residuals)/(mysum1/2) * 100
 		
+	}else if(measure == "SMAPE2"){
+		
+		RET <- abs(residuals)/(mysum2/2) * 100
+	
 	}else if(measure == "MASE"){
 		
 		all.ts <- lapply(list.data[all.id], "[[", "x")

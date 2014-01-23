@@ -1,13 +1,18 @@
 rm(list=ls())
-source("/u/sbentaie/multistep/strategies.R")
-source("/u/sbentaie/DATA/SIMULATIONS/simts.R")
+source(paste(Sys.getenv("HOME"),"/multistep/strategies.R",sep=""))
+
+do.arima <- FALSE
+if(do.arima){
+	library(forecast)
+}
 library(tseries)
+
 
 args=(commandArgs(TRUE))
 if(length(args)==0){
 	
-	folder <- "/u/sbentaie/competitions/temp/m3-"
-	id.job <- 1	
+	folder <- paste(Sys.getenv("HOME"),"/competitions/temp/m3-",sep="")
+	id.job <- 143	
 	allow.differencing <- TRUE
 	
 }else{
@@ -16,7 +21,8 @@ if(length(args)==0){
     }
 }
 
-load("/u/sbentaie/DATA/M3/M3.Rdata")
+load(paste(Sys.getenv("HOME"),"/DATA/M3/M3.Rdata",sep=""))
+
 
 ################
 all.h <- sapply(M3, "[[", "h")
@@ -29,17 +35,20 @@ nb.runs <- length(ind)
 max.H <- max(all.h)
 
 n.runs <- 10
-set.runs <- c(1:n.runs + n.runs * (id.job-1))
+initial.runs <- c(1:n.runs + n.runs * (id.job-1))
 
-bad.ids <- which(set.runs > nb.runs)
+bad.ids <- which(initial.runs > nb.runs)
 
+set.runs <- initial.runs
 if(any(bad.ids)){
-	set.runs <- set.runs[-bad.ids]
+	set.runs <- initial.runs[-bad.ids]
 }
 
-runstart <- head(set.runs, 1)
-runend <- tail(set.runs, 1)
 
+runstart <- head(initial.runs, 1)
+runend <- tail(initial.runs, 1)
+
+print(paste(runstart, "-", runend, sep = ""))
 print(set.runs)
 ################
 
@@ -49,6 +58,14 @@ strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
 "REC-MLP", "DIR-MLP", "JNT-MLP", "JNT4-MLP", "RFY-MLP",
 "REC-BST1", "DIR-BST1", "RFY-BST1",
 "REC-BST2", "DIR-BST2", "RFY-BST2")
+
+#strategies <- c("MEAN","REC-LIN","REC-MLP","DIR-MLP","RFY-BST2")
+
+#strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
+#"REC-KNN",
+#"DIR-KNN", "RFY-KNN")
+
+strategies <- c("REC-KNN")
 
 print(strategies)
 
@@ -83,6 +100,9 @@ for(i in seq_along(strategies)){
 		all.forecasts[[i]] <- list(forecasts = forecasts.matrix, temp.forecasts = forecasts.matrix, comp1 =  NULL, comp2 = NULL)
 	}
 }
+
+arima.forecasts <- matrix(NA, nrow = length(set.runs), ncol = max.H)
+
 
 all.seasonality <- NULL 
 #################
@@ -131,10 +151,9 @@ for(id.run in seq_along(set.runs))
 		}
 	}
 	
-	source("/u/sbentaie/multistep/shared-main.R")
+	source(paste(Sys.getenv("HOME"),"/multistep/shared-main.R",sep=""))
 	
 	# Updating forecasts 
-	
 	for(i in seq_along(strategies)){
 		
 		temp.forecasts <- all.forecasts[[i]]$temp.forecasts[, seq(H), id.run] <- all.forecasts[[i]]$forecasts[, seq(H), id.run]
@@ -151,7 +170,15 @@ for(id.run in seq_along(set.runs))
 	
 		all.forecasts[[i]]$forecasts[, seq(H), id.run] <- forecasts
 	}
+
+	if(do.arima){
 	
+		# Auto.arima forecasts
+		fit <- auto.arima(base.ts)
+		forecasts <- forecast(fit, h = H)$mean
+		arima.forecasts[id.run,seq(H)] <- forecasts
+	
+	}
 	length(seasonality) <- max.H
 	all.seasonality <- rbind(all.seasonality, seasonality)
 	
@@ -163,6 +190,6 @@ for(i in seq_along(strategies))
 	istrategy <- strategies[i]
 	file.name <- paste(folder, runstart , "-" , runend , "-" , istrategy, "-", allow.differencing, ".Rdata", sep="")
 	results <- all.forecasts[[i]]
-	save(file = file.name, list=c("results", "all.seasonality"))
+	save(file = file.name, list=c("results", "all.seasonality", "arima.forecasts"))
 }
 

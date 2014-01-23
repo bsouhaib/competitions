@@ -1,14 +1,20 @@
 rm(list=ls())
-source("/u/sbentaie/multistep/strategies.R")
-source("/u/sbentaie/DATA/SIMULATIONS/simts.R")
+
+source(paste(Sys.getenv("HOME"),"/multistep/strategies.R",sep=""))
+source("clean.R")
+
+do.arima <- FALSE
+if(do.arima){
+	library(forecast)
+}
 library(tseries)
+
 
 args=(commandArgs(TRUE))
 if(length(args)==0){
 	
-	folder <- "/u/sbentaie/competitions/temp/nn5-"
-	id.job <- 1	
-	allow.differencing <- TRUE
+	folder <- paste(Sys.getenv("HOME"),"/competitions/temp/nn5-",sep="")
+	id.job <- 3	
 	
 }else{
     for(i in 1:length(args)){
@@ -38,12 +44,23 @@ runend <- tail(set.runs, 1)
 print(set.runs)
 ################
 
+#strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
+#"REC-KNN", "RTI-KNN", "RJT-KNN", "RJT4-KNN",
+#"DIR-KNN", "JNT-KNN", "JNT4-KNN", "RFY-KNN", 
+#"REC-MLP", "DIR-MLP", "JNT-MLP", "JNT4-MLP", "RFY-MLP",
+#"REC-BST1", "DIR-BST1", "RFY-BST1",
+#"REC-BST2", "DIR-BST2", "RFY-BST2")
+
+#strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
+#"REC-KNN",
+#"DIR-KNN","RFY-KNN",
+#"REC-MLP", "DIR-MLP"
+#"RFY-BST2")
+
+
 strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
-"REC-KNN", "RTI-KNN", "RJT-KNN", "RJT4-KNN",
-"DIR-KNN", "JNT-KNN", "JNT4-KNN", "RFY-KNN", 
-"REC-MLP", "DIR-MLP", "JNT-MLP", "JNT4-MLP", "RFY-MLP",
-"REC-BST1", "DIR-BST1", "RFY-BST1",
-"REC-BST2", "DIR-BST2", "RFY-BST2")
+"REC-KNN",
+"DIR-KNN", "RFY-KNN")
 
 print(strategies)
 
@@ -79,6 +96,8 @@ for(i in seq_along(strategies)){
 	}
 }
 
+arima.forecasts <- matrix(NA, nrow = length(set.runs), ncol = max.H)
+
 all.seasonality <- NULL 
 #################
 
@@ -87,43 +106,24 @@ for(id.run in seq_along(set.runs))
 	RUN <- set.runs[id.run]
 	id.ts <- ind[RUN]
 	
-	base.ts <- NN5[[id.ts]]$x
-	
-# ADD PREPROCESSING of zeroes and NA here !!!
-	stop("MISSING information")
-	
-	base.ts <- ts(base.ts, freq=7)
+	base.ts <- ts(NN5[[id.ts]]$x, frequency = 7)
 	future <- NN5[[id.ts]]$xx
-	
-	# Removing seasonality
-	decomposition <- stl(base.ts, s.window = "periodic")
-	sesonal.comp <- decomposition$time.series[,"seasonal"]
-	deseasonalized.ts <- base.ts - sesonal.comp
-	trainset <- deseasonalized.ts
 
-	# Estimating future seasonality
-	date.start <- as.Date("18/03/1996", format="%d/%m/%Y")
-	date.past <- seq.Date(date.start, date.start + length(base.ts) - 1, by="day")
-	past.weekday <- format(date.past,"%a")
-	past.day <- format(date.past,"%d")
+	# Preprocessing NA and zeroes
+	base.ts[base.ts <= 0.0] <- NA
+	x <- exp(tsclean(log(base.ts)))
 	
-	date.future <- seq.Date(tail(date.past ,1) + 1, tail(date.past, 1) + H, by = "day")
-	future.weekday <- format(date.future, "%a")
-	future.day <-format(date.future, "%d")
-	
-	ind.seasonality <- numeric(H)
-	for(i in seq(H))
-	{
-		ind1 <- which(future.weekday[i] == past.weekday)
-		ind2 <- which(future.day[i] == past.day)
-		ind.seasonality[i] <- max(intersect(ind1, ind2))
-	}
-	seasonality <- sesonal.comp[ind.seasonality]
-		
+	z <- log(x)
+	stlz <- stl(z,s.window="periodic",t.window=21)
+	seasonality <- rep(head(stlz$time.series[,"seasonal"],7),8)
+
+	deseasonalized.ts  <- seasadj(stlz)
+	deseasonalized.ts  <- tsclean(deseasonalized.ts)
+	trainset <- deseasonalized.ts
+			
 	source("/u/sbentaie/multistep/shared-main.R")
 	
 	# Updating forecasts 
-	
 	for(i in seq_along(strategies)){
 		
 		temp.forecasts <- all.forecasts[[i]]$temp.forecasts[, seq(H), id.run] <- all.forecasts[[i]]$forecasts[, seq(H), id.run]
@@ -131,9 +131,19 @@ for(id.run in seq_along(set.runs))
 
 		# Restoring back seasonality
 		forecasts <- temp.forecasts + seasonality
+		forecasts <- exp(forecasts)
 	
 		all.forecasts[[i]]$forecasts[, seq(H), id.run] <- forecasts
 	}
+
+	if(do.arima){
+		# Auto.arima forecasts
+		fit <- auto.arima(trainset)
+		temp.forecasts <- forecast(fit, h = H)$mean
+		forecasts <- temp.forecasts + seasonality
+		arima.forecasts[id.run,seq(H)] <- exp(forecasts)
+	}
+	
 	
 	length(seasonality) <- max.H
 	all.seasonality <- rbind(all.seasonality, seasonality)
@@ -144,8 +154,8 @@ print(" Writing files ...")
 for(i in seq_along(strategies))
 {
 	istrategy <- strategies[i]
-	file.name <- paste(folder, runstart , "-" , runend , "-" , istrategy, "-", allow.differencing, ".Rdata", sep="")
+	file.name <- paste(folder, runstart , "-" , runend , "-" , istrategy, ".Rdata", sep="")
 	results <- all.forecasts[[i]]
-	save(file = file.name, list=c("results", "all.seasonality"))
+	save(file = file.name, list=c("results", "all.seasonality", "arima.forecasts"))
 }
 

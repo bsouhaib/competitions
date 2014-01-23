@@ -1,6 +1,6 @@
 #!/bin/bash
 
-localfolder="$HOME/simulations"
+localfolder="$HOME/competitions"
 workingfolder="/projects/mlg/sbentaie/strategies/RESDATA/"
 outfolder="$WORKDIR/OUT"
 jobfolder="jobs"
@@ -13,11 +13,11 @@ cat /dev/null > $bigfile
 
 nbsubjobs=0
 
-for idjob in $(seq 1 111) 
+for idjob in $(seq 1 111) #9 $(seq 10 18)  36 37 38 39 81 $(seq 101 107)  #$(seq 1 111) 
 do			
 			name=$prefix-$idjob
 			
-			a="/usr/local/opt/R/2.15.0/bin/R  CMD BATCH --no-restore "
+			a="/software/CC/local/opt/R/3.0.2/gcc/4.6.1/lib64/R/bin/R  CMD BATCH --no-restore "
 			b=" '--args id.job<-$idjob"
 			c="folder<-\""$workingfolder/$prefix-"\"' "
 			d="$rscript "$outfolder/$name.Rout" "
@@ -32,7 +32,7 @@ done
 read touche
 
 name=$prefix
-file="jobfolder/nn5newfile.job"
+file="$jobfolder/nn5.job"
 echo "#!/bin/bash -l" > $file
 
 echo "#PBS -t 1-$nbsubjobs" >> $file

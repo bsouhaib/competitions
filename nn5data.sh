@@ -1,16 +1,13 @@
 #!/bin/bash
 
-#allowdiff=FALSE
-allowdiff=TRUE
 
 folder="$HOME/WDFOLDER/RESULTS"
-prefix="m3"
+prefix="NN5"
 
 lowb=1
-upb=1430
-by=10
+upb=111
+by=1
 
-echo " M3 - $allowdiff "
 
 
 
@@ -23,7 +20,7 @@ allstrat=("MEAN" "REC-LIN" "DIR-LIN"
 "REC-BST1" "DIR-BST1" "RFY-BST1"
 "REC-BST2" "DIR-BST2" "RFY-BST2")
 
-allstrat=("MEAN" "REC-LIN" "REC-MLP" "DIR-MLP" "RFY-BST2")	
+allstrat=("MEAN" "REC-MLP" "DIR-MLP" "REC-LIN" "RFY-BST2")
 allstrat=("MEAN" "REC-KNN" "DIR-KNN" "REC-LIN" "RFY-KNN")
 
 	for strat in "${allstrat[@]}"
@@ -34,7 +31,7 @@ allstrat=("MEAN" "REC-KNN" "DIR-KNN" "REC-LIN" "RFY-KNN")
 			for runstart in $(seq $lowb $by $upb) 
 			do
 				runend=$(($runstart+$by-1))
-				file="$folder/$prefix-$runstart-$runend-$strat-$allowdiff.Rdata"
+				file="$folder/$prefix-$runstart-$runend-$strat.Rdata"
 				
 				if [ ! -f "$file" ]
 				then
