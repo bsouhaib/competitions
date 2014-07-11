@@ -1,55 +1,46 @@
 #!/bin/bash
 
 localfolder="$HOME/competitions"
-workingfolder="/projects/mlg/sbentaie/strategies/RESDATA/"
-outfolder="$WORKDIR/OUT"
-jobfolder="jobs"
+wdfolder="$HOME/WDFOLDER/RESULTS"
+outfolder="$HOME/WDFOLDER/OUT"
+jobfolder="$localfolder/jobs"
 rscript="main-nn5.R"
-prefix=NN5
 
-bigfile="$jobfolder/nn5file.job"
-cat /dev/null > $bigfile
+prefix=nn5thesis
+tag=""
 
 
+file="$jobfolder/nn5file.job"
+cat /dev/null > $file
 nbsubjobs=0
 
-for idjob in $(seq 1 111) #9 $(seq 10 18)  36 37 38 39 81 $(seq 101 107)  #$(seq 1 111) 
+for idjob in $(seq 1 111) 
 do			
-			name=$prefix-$idjob
+		name=$prefix-$idjob
 			
-			a="/software/CC/local/opt/R/3.0.2/gcc/4.6.1/lib64/R/bin/R  CMD BATCH --no-restore "
-			b=" '--args id.job<-$idjob"
-			c="folder<-\""$workingfolder/$prefix-"\"' "
-			d="$rscript "$outfolder/$name.Rout" "
-				
-			echo "$a $b $c $d" >> $bigfile	
+		echo "#!/bin/bash" > $file
+
+		echo "#SBATCH --time=70:0" >> $file
+		echo "#SBATCH --mem=75000  " >> $file
+
+		echo "#SBATCH -o $outfolder/$name.out" >> $file
+		echo "#SBATCH -e $outfolder/$name.err" >> $file
+		echo "#SBATCH --job-name=$name" >> $file
+		echo "module load R/3.0.2/gcc/4.8.2" >> $file		
+		echo "cd $localfolder" >> $file 
+		
 			
-			nbsubjobs=$(($nbsubjobs+1))	
-			echo $nbsubjobs	
+		
+		a="/usr/local/opt/R/3.0.2/gcc/4.8.2/bin/R  CMD BATCH --no-restore "
+		b=" '--args id.job<-$idjob  "
+		c="folder<-\""$wdfolder/$prefix-"\"' "
+		d="$rscript "$outfolder/$name$tag.Rout" "
+			
+		echo "$a $b $c $d" >> $file	
+		
+		#read touche
+
+		sbatch $file
+		nbsubjobs=$(($nbsubjobs+1))	
+		echo $nbsubjobs	
 done
-
-# PAUSE
-read touche
-
-name=$prefix
-file="$jobfolder/nn5.job"
-echo "#!/bin/bash -l" > $file
-
-echo "#PBS -t 1-$nbsubjobs" >> $file
-echo "#PBS -l file=10gb" >> $file
-echo "#PBS -l mem=20gb" >> $file
-echo "#PBS -l nodes=1:ppn=1" >> $file
-echo "#PBS -l walltime=100:00:00" >> $file
-echo "cd $localfolder" >> $file 
-
-
-# Execute the line matching the array index from file one_command_per_index.list:
-echo "cmd=\`head -\${PBS_ARRAYID} $bigfile | tail -1\`" >> $file
-
-
-# Execute the command extracted from the file:
-echo "eval \$cmd" >> $file
-
-qsub   -M "bensouhaib@gmail.com" -N "$name" -o "$outfolder/$name.out" -e "$outfolder/$name.err"  $file
-
-

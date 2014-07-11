@@ -1,12 +1,10 @@
 rm(list=ls())
-
+library(forecast)
 source(paste(Sys.getenv("HOME"),"/multistep/strategies.R",sep=""))
-source("clean.R")
+#source("clean.R")
 
-do.arima <- FALSE
-if(do.arima){
-	library(forecast)
-}
+do.arima <- F
+
 library(tseries)
 
 
@@ -58,9 +56,54 @@ print(set.runs)
 #"RFY-BST2")
 
 
-strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
-"REC-KNN",
-"DIR-KNN", "RFY-KNN")
+#strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
+#"REC-KNN",
+#"DIR-KNN", "RFY-KNN",
+#"REC-MLP", "DIR-MLP")
+
+#strategies <- c("MEAN","REC-LIN", "DIR-LIN")
+#strategies <- c("REC-MLP", "DIR-MLP")
+#strategies <- c("REC-KNN")
+#strategies <- c("DIR-KNN")
+#strategies <- c("RFY-KNN")
+#strategies <- c("RFY-BST2")
+#strategies <- c("REC-BST2", "DIR-BST2")
+
+
+#alls <- c(2,5)
+#rec.procedures <-  c("RTI",  paste("RJT", alls,  sep=""), "RJTL20", "RJTL11", "RJT")
+
+dir.procedures <-  c("DIR"                              , "DJTL20", "DJTL11", "DJT")
+strategies <- NULL
+
+#strategies <- paste(dir.procedures,"-MLPmo", sep="")
+
+#allmodels <- c("MLP", "KNN")
+allmodels <- "KNN"
+
+for(model in allmodels){
+
+        strategies <- c(strategies,  paste(dir.procedures,"-", model, sep=""))
+}
+
+##################################
+# MULTI-HORIZON
+##################################
+#strategies <- NULL
+#alls <- seq(2)
+#rec.procedures <-  c("RTI",  paste("RJT", seq(5),  sep=""), paste("RJTB",alls, sep=""),  paste("RJTL", alls , sep=""), "RJT")
+#dir.procedures <-  c("DIR"                              , paste("DJTB",alls, sep=""),  paste("DJTL", alls , sep=""), "DJT")
+#
+#
+#strategies <- NULL
+#strategies <- paste(dir.procedures,"-MLPmo", sep="")
+#allmodels <- c("LIN", "MLP", "KNN")
+#
+#for(model in allmodels){
+#	
+#	strategies <- c(strategies, paste(rec.procedures,"-", model, sep=""), paste(dir.procedures,"-", model, sep=""))
+#}
+##################################
 
 print(strategies)
 
@@ -70,9 +113,9 @@ control <- strategy_control("ts-cv",train.percentage = 0.7, n.fold=5)
 
 bst1 <- strategy_learner(name = "BST", interactions=1, nu = 0.1, max.mstop = 500)
 bst2 <- strategy_learner(name = "BST", interactions=2, nu = 0.1, max.mstop = 500)
-knn <-  strategy_learner(name = "KNN")
-mlp <-  strategy_learner(name = "MLP", set.hidden = c(0,1,2,3,5), set.decay = c(0.005,0.01,0.05,0.1,0.2,0.3), nb.runs = 1, maxiter = 100)
-lin <-  strategy_learner(name = "MLP", set.hidden = 0, set.decay = 0)
+knn <-  strategy_learner(name = "KNN", inc = 5)
+mlp <-  strategy_learner(name = "MLP", set.hidden = c(0,1,2,3,5), set.decay = c(0.005,0.01,0.05,0.1,0.2,0.3), nb.runs = 1, maxiter = 100, drop.linbias = F)
+lin <-  strategy_learner(name = "MLP", set.hidden = 0, set.decay = 0, nb.runs = 1, drop.linbias = F)
 #################
 
 
@@ -120,8 +163,11 @@ for(id.run in seq_along(set.runs))
 	deseasonalized.ts  <- seasadj(stlz)
 	deseasonalized.ts  <- tsclean(deseasonalized.ts)
 	trainset <- deseasonalized.ts
-			
-	source("/u/sbentaie/multistep/shared-main.R")
+	
+		
+        source(paste(Sys.getenv("HOME"),"/multistep/shared-main.R",sep=""))
+
+
 	
 	# Updating forecasts 
 	for(i in seq_along(strategies)){
@@ -134,6 +180,8 @@ for(id.run in seq_along(set.runs))
 		forecasts <- exp(forecasts)
 	
 		all.forecasts[[i]]$forecasts[, seq(H), id.run] <- forecasts
+
+print(lsos())
 	}
 
 	if(do.arima){
@@ -147,6 +195,7 @@ for(id.run in seq_along(set.runs))
 	
 	length(seasonality) <- max.H
 	all.seasonality <- rbind(all.seasonality, seasonality)
+
 	
 } # end RUN 
 

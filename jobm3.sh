@@ -6,11 +6,12 @@ outfolder="$HOME/WDFOLDER/OUT"
 jobfolder="$localfolder/jobs"
 rscript="main-m3.R"
 
-prefix=m3
+prefix=m3thesis
 tag=""
 
-#allowdiff=FALSE
-allowdiff=TRUE
+allowdiff=FALSE
+
+#allowdiff=TRUE
 
 file="$jobfolder/m3file.job"
 cat /dev/null > $file
@@ -25,12 +26,12 @@ do
 		echo "#SBATCH -o $outfolder/$name.out" >> $file
 		echo "#SBATCH -e $outfolder/$name.err" >> $file
 		echo "#SBATCH --job-name=$name" >> $file
-		echo "module load R/3.0.1/gcc/4.7.0" >> $file		
+		echo "module load R/3.0.2/gcc/4.8.2" >> $file		
 		echo "cd $localfolder" >> $file 
 		
 			
 		
-		a="/usr/local/opt/R/3.0.1/gcc/4.7.0/bin/R  CMD BATCH --no-restore "
+		a="/usr/local/opt/R/3.0.2/gcc/4.8.2/bin/R  CMD BATCH --no-restore "
 		b=" '--args id.job<-$idjob  allow.differencing<-$allowdiff  "
 		c="folder<-\""$wdfolder/$prefix-"\"' "
 		d="$rscript "$outfolder/$name$tag.Rout" "

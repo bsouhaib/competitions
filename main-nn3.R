@@ -11,8 +11,8 @@ library(tseries)
 args=(commandArgs(TRUE))
 if(length(args)==0){
 	
-	folder <- paste(Sys.getenv("HOME"),"/competitions/temp/m3-",sep="")
-	id.job <- 143	
+	folder <- paste(Sys.getenv("HOME"),"/competitions/temp/nn3-",sep="")
+	id.job <- 1	
 	allow.differencing <- TRUE
 	
 }else{
@@ -21,20 +21,14 @@ if(length(args)==0){
     }
 }
 
-load(paste(Sys.getenv("HOME"),"/DATA/M3/M3.Rdata",sep=""))
+load(paste(Sys.getenv("HOME"),"/DATA/NN3/NN3.Rdata",sep=""))
 
 
 ################
-all.h <- sapply(M3, "[[", "h")
-all.n <- sapply(M3, "[[", "n")
+nb.runs <- 111
+max.H <- 18
 
-#ind <- which(all.n >= 50)
-ind <- which(all.h == 18)
-
-nb.runs <- length(ind)
-max.H <- max(all.h)
-
-n.runs <- 10
+n.runs <- 1
 initial.runs <- c(1:n.runs + n.runs * (id.job-1))
 
 bad.ids <- which(initial.runs > nb.runs)
@@ -52,48 +46,9 @@ print(paste(runstart, "-", runend, sep = ""))
 print(set.runs)
 ################
 
-#strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
-#"REC-KNN", "RTI-KNN", "RJT-KNN", "RJT4-KNN",
-#"DIR-KNN", "JNT-KNN", "JNT4-KNN", "RFY-KNN", 
-#"REC-MLP", "DIR-MLP", "JNT-MLP", "JNT4-MLP", "RFY-MLP",
-#"REC-BST1", "DIR-BST1", "RFY-BST1",
-#"REC-BST2", "DIR-BST2", "RFY-BST2")
-
-#strategies <- c("MEAN","REC-LIN","REC-MLP","DIR-MLP","RFY-BST2")
-
-#strategies <- c("MEAN", "REC-LIN", "DIR-LIN",
-#"REC-KNN",
-#"DIR-KNN", "RFY-KNN")
-
-#strategies <- c("REC-LIN")
-
-############### MULTI-STAGE  STRATEGIES #############
-
-#strategies <- c("MEAN", "NAIVE", "REC-LIN", "DIR-LIN")
+strategies <- c("MEAN", "REC-LIN", "DIR-LIN")
 #strategies <- c("REC-MLP", "DIR-MLP", "REC-KNN", "DIR-KNN", "RFY-KNN")
 #strategies <- c("REC-BST2", "DIR-BST2", "RFY-BST2")
-
-############### MULTI-HORIZON  STRATEGIES #############
-if(TRUE){
-#----
-alls <- c(2,5)
-rec.procedures <-  c("RTI",  paste("RJT", alls,  sep=""), "RJTL20", "RJTL11", "RJT")
-dir.procedures <-  c("DIR"                              , "DJTL20", "DJTL11", "DJT")
-
-strategies <- NULL
-
-#strategies <- paste(dir.procedures,"-MLPmo", sep="")
-
-allmodels <- c("MLP", "KNN")
-
-for(model in allmodels){
-	
-	strategies <- c(strategies, paste(rec.procedures,"-", model, sep=""), paste(dir.procedures,"-", model, sep=""))
-}
-#----
-}
-#######################################################
-
 
 print(strategies)
 
@@ -140,12 +95,11 @@ for(id.run in seq_along(set.runs))
 	##### WE START WITH FALSE 
 	lin$drop.linbias <- FALSE
 	
-	RUN <- set.runs[id.run]
-	id.ts <- ind[RUN]
+	id.ts <- RUN <- set.runs[id.run]
 	
-	base.ts <- M3[[id.ts]]$x
-	future <- M3[[id.ts]]$xx
-	H <- M3[[id.ts]]$h
+	base.ts <- NN3[[id.ts]]$x
+	future <- NN3[[id.ts]]$xx
+	H <- 18
 	
 	# Seasonality
 	if(frequency(base.ts) == 1)
@@ -162,6 +116,9 @@ for(id.run in seq_along(set.runs))
 		
 		future.year <- as.integer(time(future))
 		future.month <- cycle(future)
+		
+		browser()
+		
 		seasonality <- window(sesonal.comp, 
 							  start=c(future.year[1] - 2, future.month[1]), end = c(tail(future.year, 1) - 2, tail(future.month, 1)))
 		seasonality <- as.numeric(seasonality)

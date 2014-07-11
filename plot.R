@@ -76,36 +76,85 @@ for(i in seq_along(ind.available))
 	future[i, seq(h)] <- fut
 }
 
-	n.files <- 0
-	index.notna <- NULL 
-	for(idstart in seq(1, n.runs.available, by = step))
-	{
-		idend <- idstart + (step-1)
+n.files <- 0
+index.notna <- NULL 
+for(idstart in seq(1, n.runs.available, by = step))
+{
+	idend <- idstart + (step-1)
+	
+	set.runs <- seq(idstart,idend)
+	bad.ids <- which(set.runs > n.runs.available)
+	
+	if(any(bad.ids))
+	set.runs <- set.runs[-bad.ids]
+	
+	
+	for(strategy in "REC-KNN"){
 		
-		for(strategy in all.strategies){
-				
-			file.name <- paste(results.folder, prefix, "-", idstart, "-",idend, "-", strategy, "-", allow.differencing, ".Rdata", sep="")
-					
-			set.runs <- seq(idstart,idend)
-			bad.ids <- which(set.runs > n.runs.available)
-			
-			if(any(bad.ids))
-			set.runs <- set.runs[-bad.ids]
-			
-			if(file.exists(file.name)){
-				
-				load(file.name)
-				if(strategy == all.strategies[1]){
-					f1[set.runs, seq(H)] <- t(results$forecasts[, seq(H) , seq(length(set.runs))])
-				}else{
-					f2[set.runs, seq(H)] <- t(results$forecasts[, seq(H) , seq(length(set.runs))])
-				}
-				
-				n.files <- n.files + 1
-			}
+		file1.name <- paste(results.folder, prefix, "-", idstart, "-",idend, "-", strategy, "-", FALSE, ".Rdata", sep="")
+		if(file.exists(file1.name)){
+			load(file1.name)
+			f1[set.runs, seq(H)] <- t(results$forecasts[, seq(H) , seq(length(set.runs))])
 		}
 		
+		file2.name <- paste(results.folder, prefix, "-", idstart, "-",idend, "-", strategy, "-", TRUE, ".Rdata", sep="")
+		if(file.exists(file2.name)){
+			load(file2.name)
+			f2[set.runs, seq(H)] <- t(results$forecasts[, seq(H) , seq(length(set.runs))])
+		}
+	
+	
 	}
+	
+}
+
+pdf("comp.pdf")
+par(mfrow=c(2,1))
+
+
+res <-(f1-f2)^2
+res2 <- apply(res,1,mean)
+
+err1 <- error(f1, future, "SMAPE1", list.data=NULL, all.id = ind.available)
+nodiff <- apply(err1,1,mean)
+
+err2 <- error(f2, future, "SMAPE1", list.data=NULL, all.id = ind.available)
+diff <- apply(err2,1,mean)
+
+
+res <- diff-nodiff
+
+
+# interval <- seq(n.runs.available)
+#interval <- sort(res2,index=T,decreasing=T)$ix
+interval <- sort(res,decreasing=T,index=T)$ix
+
+for(i in interval)
+{
+	id.series <- ind.available[i]
+	myts <- M3[[id.series]]$x
+	mat <-rbind( cbind(myts,myts,myts), cbind(f1[i,],f2[i,],future[i,]) )
+	ts.plot(mat,col=c("blue","red","black"),main=strategy)
+	
+	plot.ts(log(myts))
+
+}
+dev.off();
+
+
+pdf("test.pdf")
+par(mfrow=c(2,1))
+for(i in seq(n.runs.available))
+{
+	id.series <- ind.available[i]
+	myts <- M3[[id.series]]$x
+	plot.ts(myts)
+	plot.ts(log(myts))
+	
+}
+dev.off();
+
+stop("done")
 
 
 err1 <- error(f1, future, "MASE", list.data, all.id = ind.available)
@@ -121,6 +170,6 @@ dev.off();
 #	ts.plot(cbind(f1[its,],f2[its,],future[its,]),col=c("blue", "red", "black"))
 #}
 #dev.off()
-	
-	
-	
+
+
+
